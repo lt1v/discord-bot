@@ -1,9 +1,12 @@
+print("📦 BOT FILE LOADED")
+
 import discord
 import asyncio
 import aiohttp
 import os
 from datetime import datetime, timedelta, timezone
 
+# 🔐 TOKEN (Render)
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
@@ -17,7 +20,7 @@ intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
 
-# 💰 LTC (safe)
+# 💰 LTC
 async def get_ltc_price():
     try:
         url = "https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd,eur"
@@ -28,7 +31,7 @@ async def get_ltc_price():
                 return round(data["litecoin"]["eur"], 2), round(data["litecoin"]["usd"], 2)
 
     except Exception as e:
-        print("API error:", e)
+        print("❌ API error:", e)
         return "??", "??"
 
 
@@ -80,23 +83,22 @@ async def nuke_channel(channel):
         return new_channel
 
     except Exception as e:
-        print("NUKE ERROR:", e)
+        print("❌ NUKE ERROR:", e)
         return None
 
 
-# 🔁 LOOP PRINCIPALE
+# 🔁 LOOP
 async def main_loop():
     print("🚀 LOOP START")
 
-    await asyncio.sleep(5)  # 🔥 anti rate limit au démarrage
+    await asyncio.sleep(5)
 
-    # 💣 NUKE INITIAL
     new_channels = []
 
     for cid in CHANNEL_IDS:
         channel = client.get_channel(cid)
         if not channel:
-            print("Channel introuvable:", cid)
+            print("❌ Channel introuvable:", cid)
             continue
 
         await asyncio.sleep(2)
@@ -111,7 +113,6 @@ async def main_loop():
 
     print("Channels actifs:", CHANNEL_IDS)
 
-    # 🔁 LOOP
     while True:
         next_reset = datetime.now(timezone.utc) + timedelta(seconds=RESET_INTERVAL)
         timestamp = int(next_reset.timestamp())
@@ -123,13 +124,12 @@ async def main_loop():
             if channel:
                 try:
                     await channel.send(embed=create_embed(timestamp, eur, usd))
-                    await asyncio.sleep(1)  # anti spam
+                    await asyncio.sleep(1)
                 except Exception as e:
-                    print("SEND ERROR:", e)
+                    print("❌ SEND ERROR:", e)
 
         await asyncio.sleep(RESET_INTERVAL)
 
-        # 💣 NUKE CYCLE
         new_channels = []
 
         for cid in CHANNEL_IDS:
@@ -155,11 +155,17 @@ async def on_ready():
     asyncio.create_task(main_loop())
 
 
-# ▶️ START
-if not TOKEN:
-    print("❌ TOKEN MANQUANT")
-else:
-    try:
-        client.run(TOKEN)
-    except Exception as e:
-        print("💥 CRASH:", e)
+# 🔥 START + DEBUG
+print("🚀 START SCRIPT")
+
+try:
+    if not TOKEN:
+        print("❌ TOKEN MANQUANT")
+        exit()
+
+    print("✅ TOKEN OK")
+
+    client.run(TOKEN)
+
+except Exception as e:
+    print("💥 ERREUR FATALE:", e)
