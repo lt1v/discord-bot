@@ -4,7 +4,7 @@ import aiohttp
 import os
 from datetime import datetime, timedelta, timezone
 
-# 🔐 TOKEN sécurisé
+# 🔐 TOKEN sécurisé (Render)
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
@@ -12,7 +12,7 @@ CHANNEL_IDS = [
     1499539354689994844
 ]
 
-RESET_INTERVAL = 3600
+RESET_INTERVAL = 3600 # secondes
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
@@ -20,8 +20,8 @@ client = discord.Client(intents=intents)
 session = None
 
 
+# 💰 LTC LIVE
 async def get_ltc_price():
-    global session
     try:
         url = "https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd,eur"
         async with session.get(url) as resp:
@@ -29,15 +29,17 @@ async def get_ltc_price():
             eur = round(data["litecoin"]["eur"], 2)
             usd = round(data["litecoin"]["usd"], 2)
             return eur, usd
-    except:
+    except Exception as e:
+        print("❌ API error:", e)
         return "??", "??"
 
 
+# 🎨 EMBED
 def create_embed(timestamp, eur, usd):
     embed = discord.Embed(
         title="<:settings:1484630585753473054> Channel BOMBED",
         description="This channel gets nuked **every hour** to maintain a clean environment.",
-        color=0x6C2BD9
+        color=0x6C2BD9  # violet
     )
 
     embed.add_field(
@@ -62,6 +64,7 @@ def create_embed(timestamp, eur, usd):
     return embed
 
 
+# 💣 NUKE + garde position
 async def nuke_channel(channel):
     try:
         position = channel.position
@@ -80,21 +83,21 @@ async def nuke_channel(channel):
         return None
 
 
+# 🔁 LOOP PRINCIPALE
 async def main_loop():
     print("🚀 LOOP START")
 
+    # 🔥 nuke initial
     new_channels = []
+
     for cid in CHANNEL_IDS:
         try:
             channel = await client.fetch_channel(cid)
-        except:
-            print("❌ Channel introuvable:", cid)
-            continue
-
-        new_channel = await nuke_channel(channel)
-
-        if new_channel:
-            new_channels.append(new_channel.id)
+            new_channel = await nuke_channel(channel)
+            if new_channel:
+                new_channels.append(new_channel.id)
+        except Exception as e:
+            print("❌ Channel error:", e)
 
     if new_channels:
         CHANNEL_IDS.clear()
@@ -102,40 +105,41 @@ async def main_loop():
 
     print("Channels actifs:", CHANNEL_IDS)
 
+    # 🔁 boucle infinie
     while True:
         next_reset = datetime.now(timezone.utc) + timedelta(seconds=RESET_INTERVAL)
         timestamp = int(next_reset.timestamp())
 
         eur, usd = await get_ltc_price()
 
+        # 📤 envoi embed
         for cid in CHANNEL_IDS:
             try:
                 channel = await client.fetch_channel(cid)
                 await channel.send(embed=create_embed(timestamp, eur, usd))
             except Exception as e:
-                print("❌ Erreur send:", e)
+                print("❌ Send error:", e)
 
         await asyncio.sleep(RESET_INTERVAL)
 
+        # 💣 nuke cycle
         new_channels = []
 
         for cid in CHANNEL_IDS:
             try:
                 channel = await client.fetch_channel(cid)
-            except:
-                print("❌ Channel déjà supprimé:", cid)
-                continue
-
-            new_channel = await nuke_channel(channel)
-
-            if new_channel:
-                new_channels.append(new_channel.id)
+                new_channel = await nuke_channel(channel)
+                if new_channel:
+                    new_channels.append(new_channel.id)
+            except Exception as e:
+                print("❌ Nuke loop error:", e)
 
         if new_channels:
             CHANNEL_IDS.clear()
             CHANNEL_IDS.extend(new_channels)
 
 
+# 🚀 READY
 @client.event
 async def on_ready():
     global session
@@ -145,10 +149,5 @@ async def on_ready():
     client.loop.create_task(main_loop())
 
 
-# 🔥 protection crash + restart auto
-while True:
-    try:
-        client.run(TOKEN)
-    except Exception as e:
-        print("Crash détecté:", e)
-        asyncio.sleep(5)
+# ▶️ LANCEMENT (SANS BOUCLE BUG)
+client.run(TOKEN)
