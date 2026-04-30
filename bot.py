@@ -1,11 +1,10 @@
-print("TOKEN =", os.getenv("TOKEN"))
 import discord
 import asyncio
 import aiohttp
 import os
 from datetime import datetime, timedelta, timezone
 
-# 🔐 TOKEN sécurisé (Render)
+# 🔐 TOKEN sécurisé
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
@@ -13,23 +12,24 @@ CHANNEL_IDS = [
     1499539354689994844
 ]
 
-RESET_INTERVAL = 3600 # secondes
+RESET_INTERVAL = 3600
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
-session = None
 
-
-# 💰 LTC LIVE
+# 💰 LTC LIVE (FIX SESSION)
 async def get_ltc_price():
     try:
         url = "https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd,eur"
-        async with session.get(url) as resp:
-            data = await resp.json()
-            eur = round(data["litecoin"]["eur"], 2)
-            usd = round(data["litecoin"]["usd"], 2)
-            return eur, usd
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                data = await resp.json()
+                eur = round(data["litecoin"]["eur"], 2)
+                usd = round(data["litecoin"]["usd"], 2)
+                return eur, usd
+
     except Exception as e:
         print("❌ API error:", e)
         return "??", "??"
@@ -40,7 +40,7 @@ def create_embed(timestamp, eur, usd):
     embed = discord.Embed(
         title="<:settings:1484630585753473054> Channel BOMBED",
         description="This channel gets nuked **every hour** to maintain a clean environment.",
-        color=0x6C2BD9  # violet
+        color=0x6C2BD9
     )
 
     embed.add_field(
@@ -88,7 +88,7 @@ async def nuke_channel(channel):
 async def main_loop():
     print("🚀 LOOP START")
 
-    # 🔥 nuke initial
+    # 💣 nuke initial
     new_channels = []
 
     for cid in CHANNEL_IDS:
@@ -143,12 +143,15 @@ async def main_loop():
 # 🚀 READY
 @client.event
 async def on_ready():
-    global session
-    session = aiohttp.ClientSession()
-
     print(f"✅ Connecté en tant que {client.user}")
     client.loop.create_task(main_loop())
 
 
-# ▶️ LANCEMENT (SANS BOUCLE BUG)
-client.run(TOKEN)
+# 🔥 DEBUG + START
+if TOKEN is None:
+    print("❌ TOKEN MANQUANT")
+else:
+    try:
+        client.run(TOKEN)
+    except Exception as e:
+        print("💥 CRASH:", e)
