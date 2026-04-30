@@ -1,9 +1,12 @@
+print("📦 BOT FILE LOADED")
+
 import discord
 import asyncio
 import aiohttp
 import os
 from datetime import datetime, timedelta, timezone
 
+# 🔐 TOKEN (Render)
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
@@ -16,21 +19,19 @@ RESET_INTERVAL = 3600
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
-# 🔒 sécurité
-started = False
-nuking = False
-
 
 # 💰 LTC
 async def get_ltc_price():
     try:
         url = "https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd,eur"
+
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = await resp.json()
                 return round(data["litecoin"]["eur"], 2), round(data["litecoin"]["usd"], 2)
+
     except Exception as e:
-        print("API error:", e)
+        print("❌ API error:", e)
         return "??", "??"
 
 
@@ -50,12 +51,16 @@ def create_embed(timestamp, eur, usd):
             f"  ◦ €{eur}\n"
             f"  ◦ ${usd}\n\n"
             f"> Next nuking <t:{timestamp}:R>\n"
+            "> This Channel is **not a Marketplace and Advertising is strictly prohibited**\n\n"
+            "**Do you know that?**\n"
+            "> A signature is called a John Hancock because he signed the Declaration of Independence."
         ),
         inline=False
     )
 
+    embed.set_thumbnail(url="https://media.tenor.com/2roX3uxz_68AAAAC/cat-space.gif")
     embed.timestamp = datetime.now(timezone.utc)
-    embed.set_footer(text="Fluxify System")
+    embed.set_footer(text="Fluxify System – Fast & Safe Support")
 
     return embed
 
@@ -65,49 +70,55 @@ async def nuke_channel(channel):
     try:
         position = channel.position
         category = channel.category
-        name = channel.name
 
         new_channel = await channel.clone()
         await asyncio.sleep(1)
 
-        try:
-            await channel.delete()
-        except Exception as e:
-            print("DELETE FAIL:", e)
-
+        await channel.delete()
         await asyncio.sleep(1)
 
         await new_channel.edit(position=position, category=category)
 
-        print("💣 Nuke OK:", name)
+        print("💣 Nuke OK:", new_channel.name)
         return new_channel
 
     except Exception as e:
-        print("NUKE ERROR:", e)
+        print("❌ NUKE ERROR:", e)
         return None
 
 
 # 🔁 LOOP
 async def main_loop():
-    global nuking
-
     print("🚀 LOOP START")
 
     await asyncio.sleep(5)
 
-    while True:
-        if nuking:
-            await asyncio.sleep(2)
+    new_channels = []
+
+    for cid in CHANNEL_IDS:
+        channel = client.get_channel(cid)
+        if not channel:
+            print("❌ Channel introuvable:", cid)
             continue
 
-        nuking = True
+        await asyncio.sleep(2)
+        new_channel = await nuke_channel(channel)
 
+        if new_channel:
+            new_channels.append(new_channel.id)
+
+    if new_channels:
+        CHANNEL_IDS.clear()
+        CHANNEL_IDS.extend(new_channels)
+
+    print("Channels actifs:", CHANNEL_IDS)
+
+    while True:
         next_reset = datetime.now(timezone.utc) + timedelta(seconds=RESET_INTERVAL)
         timestamp = int(next_reset.timestamp())
 
         eur, usd = await get_ltc_price()
 
-        # 📤 envoi embed
         for cid in CHANNEL_IDS:
             channel = client.get_channel(cid)
             if channel:
@@ -115,11 +126,10 @@ async def main_loop():
                     await channel.send(embed=create_embed(timestamp, eur, usd))
                     await asyncio.sleep(1)
                 except Exception as e:
-                    print("SEND ERROR:", e)
+                    print("❌ SEND ERROR:", e)
 
         await asyncio.sleep(RESET_INTERVAL)
 
-        # 💣 NUKE
         new_channels = []
 
         for cid in CHANNEL_IDS:
@@ -128,7 +138,6 @@ async def main_loop():
                 continue
 
             await asyncio.sleep(2)
-
             new_channel = await nuke_channel(channel)
 
             if new_channel:
@@ -138,28 +147,25 @@ async def main_loop():
             CHANNEL_IDS.clear()
             CHANNEL_IDS.extend(new_channels)
 
-        nuking = False
-
 
 # 🚀 READY
 @client.event
 async def on_ready():
-    global started
-
-    if started:
-        return
-
-    started = True
-
     print(f"✅ Connecté en tant que {client.user}")
     asyncio.create_task(main_loop())
 
 
-# ▶️ START
-if not TOKEN:
-    print("❌ TOKEN MANQUANT")
-else:
-    try:
-        client.run(TOKEN)
-    except Exception as e:
-        print("CRASH:", e)
+# 🔥 START + DEBUG
+print("🚀 START SCRIPT")
+
+try:
+    if not TOKEN:
+        print("❌ TOKEN MANQUANT")
+        exit()
+
+    print("✅ TOKEN OK")
+
+    client.run(TOKEN)
+
+except Exception as e:
+    print("💥 ERREUR FATALE:", e)
