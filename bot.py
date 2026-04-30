@@ -1,12 +1,10 @@
-print("📦 BOT FILE LOADED")
-
 import discord
 import asyncio
 import aiohttp
 import os
 from datetime import datetime, timedelta, timezone
 
-# 🔐 TOKEN (Render)
+# 🔐 TOKEN sécurisé
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
@@ -20,7 +18,7 @@ intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
 
-# 💰 LTC
+# 💰 LTC LIVE (FIX SESSION)
 async def get_ltc_price():
     try:
         url = "https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd,eur"
@@ -28,7 +26,9 @@ async def get_ltc_price():
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = await resp.json()
-                return round(data["litecoin"]["eur"], 2), round(data["litecoin"]["usd"], 2)
+                eur = round(data["litecoin"]["eur"], 2)
+                usd = round(data["litecoin"]["usd"], 2)
+                return eur, usd
 
     except Exception as e:
         print("❌ API error:", e)
@@ -65,17 +65,14 @@ def create_embed(timestamp, eur, usd):
     return embed
 
 
-# 💣 NUKE SAFE
+# 💣 NUKE + garde position
 async def nuke_channel(channel):
     try:
         position = channel.position
         category = channel.category
 
         new_channel = await channel.clone()
-        await asyncio.sleep(1)
-
         await channel.delete()
-        await asyncio.sleep(1)
 
         await new_channel.edit(position=position, category=category)
 
@@ -83,29 +80,25 @@ async def nuke_channel(channel):
         return new_channel
 
     except Exception as e:
-        print("❌ NUKE ERROR:", e)
+        print("❌ ERREUR NUKE:", e)
         return None
 
 
-# 🔁 LOOP
+# 🔁 LOOP PRINCIPALE
 async def main_loop():
     print("🚀 LOOP START")
 
-    await asyncio.sleep(5)
-
+    # 💣 nuke initial
     new_channels = []
 
     for cid in CHANNEL_IDS:
-        channel = client.get_channel(cid)
-        if not channel:
-            print("❌ Channel introuvable:", cid)
-            continue
-
-        await asyncio.sleep(2)
-        new_channel = await nuke_channel(channel)
-
-        if new_channel:
-            new_channels.append(new_channel.id)
+        try:
+            channel = await client.fetch_channel(cid)
+            new_channel = await nuke_channel(channel)
+            if new_channel:
+                new_channels.append(new_channel.id)
+        except Exception as e:
+            print("❌ Channel error:", e)
 
     if new_channels:
         CHANNEL_IDS.clear()
@@ -113,35 +106,34 @@ async def main_loop():
 
     print("Channels actifs:", CHANNEL_IDS)
 
+    # 🔁 boucle infinie
     while True:
         next_reset = datetime.now(timezone.utc) + timedelta(seconds=RESET_INTERVAL)
         timestamp = int(next_reset.timestamp())
 
         eur, usd = await get_ltc_price()
 
+        # 📤 envoi embed
         for cid in CHANNEL_IDS:
-            channel = client.get_channel(cid)
-            if channel:
-                try:
-                    await channel.send(embed=create_embed(timestamp, eur, usd))
-                    await asyncio.sleep(1)
-                except Exception as e:
-                    print("❌ SEND ERROR:", e)
+            try:
+                channel = await client.fetch_channel(cid)
+                await channel.send(embed=create_embed(timestamp, eur, usd))
+            except Exception as e:
+                print("❌ Send error:", e)
 
         await asyncio.sleep(RESET_INTERVAL)
 
+        # 💣 nuke cycle
         new_channels = []
 
         for cid in CHANNEL_IDS:
-            channel = client.get_channel(cid)
-            if not channel:
-                continue
-
-            await asyncio.sleep(2)
-            new_channel = await nuke_channel(channel)
-
-            if new_channel:
-                new_channels.append(new_channel.id)
+            try:
+                channel = await client.fetch_channel(cid)
+                new_channel = await nuke_channel(channel)
+                if new_channel:
+                    new_channels.append(new_channel.id)
+            except Exception as e:
+                print("❌ Nuke loop error:", e)
 
         if new_channels:
             CHANNEL_IDS.clear()
@@ -152,20 +144,14 @@ async def main_loop():
 @client.event
 async def on_ready():
     print(f"✅ Connecté en tant que {client.user}")
-    asyncio.create_task(main_loop())
+    client.loop.create_task(main_loop())
 
 
-# 🔥 START + DEBUG
-print("🚀 START SCRIPT")
-
-try:
-    if not TOKEN:
-        print("❌ TOKEN MANQUANT")
-        exit()
-
-    print("✅ TOKEN OK")
-
-    client.run(TOKEN)
-
-except Exception as e:
-    print("💥 ERREUR FATALE:", e)
+# 🔥 DEBUG + START
+if TOKEN is None:
+    print("❌ TOKEN MANQUANT")
+else:
+    try:
+        client.run(TOKEN)
+    except Exception as e:
+        print("💥 CRASH:", e)
