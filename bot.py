@@ -1,3 +1,4 @@
+print("TOKEN =", os.getenv("TOKEN"))
 import discord
 import asyncio
 import aiohttp
