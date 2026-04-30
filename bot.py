@@ -1,13 +1,15 @@
 import discord
 import asyncio
 import aiohttp
+import os
 from datetime import datetime, timedelta, timezone
 
-TOKEN = "MTQ5OTUxOTg1NTUwODg1Mjg2Nw.Ghmpa4.XrgCfML25vuZ9rORFfzardQE8WTpGJGsJFcpDk"
+# 🔐 TOKEN sécurisé
+TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
-    1499539354689994844,
-    1499539348666716251
+    1499539348666716251,
+    1499539354689994844
 ]
 
 RESET_INTERVAL = 3600
@@ -35,7 +37,7 @@ def create_embed(timestamp, eur, usd):
     embed = discord.Embed(
         title="<:settings:1484630585753473054> Channel BOMBED",
         description="This channel gets nuked **every hour** to maintain a clean environment.",
-        color=0x6C2BD9  # 💜 couleur violet style ton logo
+        color=0x6C2BD9
     )
 
     embed.add_field(
@@ -143,4 +145,10 @@ async def on_ready():
     client.loop.create_task(main_loop())
 
 
-client.run(TOKEN)
+# 🔥 protection crash + restart auto
+while True:
+    try:
+        client.run(TOKEN)
+    except Exception as e:
+        print("Crash détecté:", e)
+        asyncio.sleep(5)
