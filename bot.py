@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
-    1499549243482968064,
-    1499549229121667155
+    1499551493815013488,
+    1499551490530873426
 ]
 
 RESET_INTERVAL = 3600  # secondes
@@ -39,9 +39,8 @@ def create_embed(timestamp, eur, usd):
     embed = discord.Embed(
         title="<:settings:1484630585753473054> Channel BOMBED",
         description="This channel gets nuked **every hour** to maintain a clean environment.",
-        color=0x6C2BD9  # violet
+        color=0x6C2BD9
     )
-
     embed.add_field(
         name="",
         value=(
@@ -56,11 +55,9 @@ def create_embed(timestamp, eur, usd):
         ),
         inline=False
     )
-
     embed.set_thumbnail(url="https://media.tenor.com/2roX3uxz_68AAAAC/cat-space.gif")
     embed.timestamp = datetime.now(timezone.utc)
     embed.set_footer(text="Fluxify System – Fast & Safe Support")
-
     return embed
 
 
@@ -69,15 +66,12 @@ async def nuke_channel(channel):
     try:
         position = channel.position
         category = channel.category
-
+        name = channel.name
         new_channel = await channel.clone()
         await channel.delete()
-
         await new_channel.edit(position=position, category=category)
-
-        print("💣 Nuke OK:", new_channel.name)
+        print("💣 Nuke OK:", name)
         return new_channel
-
     except Exception as e:
         print("❌ ERREUR NUKE:", e)
         return None
@@ -89,7 +83,6 @@ async def main_loop():
 
     # 🔥 nuke initial
     new_channels = []
-
     for cid in CHANNEL_IDS:
         try:
             channel = await client.fetch_channel(cid)
@@ -124,7 +117,6 @@ async def main_loop():
 
         # 💣 nuke cycle
         new_channels = []
-
         for cid in CHANNEL_IDS:
             try:
                 channel = await client.fetch_channel(cid)
@@ -144,10 +136,9 @@ async def main_loop():
 async def on_ready():
     global session
     session = aiohttp.ClientSession()
-
     print(f"✅ Connecté en tant que {client.user}")
     client.loop.create_task(main_loop())
 
 
-# ▶️ LANCEMENT (SANS BOUCLE BUG)
+# ▶️ LANCEMENT
 client.run(TOKEN)
