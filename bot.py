@@ -44,7 +44,7 @@ def create_embed(timestamp, eur, usd):
     embed.add_field(
         name="",
         value=(
-            "[Learn More About Fluxify Exchange](https://easyexch.org)\n\n"
+            "[Learn More About Fluxify Exchange](https://fluxify.space)\n\n"
             "• <:litecoin:1484628704075452467> **Current LTC Rates:**\n"
             f"  ◦ €{eur}\n"
             f"  ◦ ${usd}\n\n"
