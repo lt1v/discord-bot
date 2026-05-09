@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
-    1500964703999099042,
-    1500964710315589853
+    1502239386627084369,
+    1502239382789165058
 ]
 
 RESET_INTERVAL = 3600  # secondes
