@@ -8,11 +8,10 @@ from datetime import datetime, timedelta, timezone
 TOKEN = os.getenv("TOKEN")
 
 CHANNEL_IDS = [
-    1502239386627084369,
-    1502239382789165058
+    1508496841682063482
 ]
 
-RESET_INTERVAL = 3600  # secondes
+RESET_INTERVAL = 86400  # secondes
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
